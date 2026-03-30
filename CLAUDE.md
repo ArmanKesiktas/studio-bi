@@ -30,7 +30,7 @@ studioBI/
 
 ### Env Variables (Render'da tanımlı)
 ```
-GEMINI_API_KEY=AIzaSyBqBfcThs_vSWaetV82geQVrdsvw4BVPxU
+GEMINI_API_KEY=<Render dashboard'dan veya backend/.env'den>  ← GİT'E KOMİT EDİLMEZ
 GEMINI_MODEL=gemini-2.5-flash
 MAX_UPLOAD_SIZE_MB=50
 STORAGE_PATH=./storage
@@ -175,9 +175,10 @@ render logs --resources srv-d75cogtm5p6s73dvnaqg --output text --limit 50
 
 # Env var güncelle (Render API ile — CLI update env desteklemiyor)
 curl -X PUT "https://api.render.com/v1/services/srv-d75cogtm5p6s73dvnaqg/env-vars" \
-  -H "Authorization: Bearer rnd_ggp73emWQ6PRBoAoRfYBZkevZioh" \
+  -H "Authorization: Bearer $RENDER_API_KEY" \
   -H "Content-Type: application/json" \
   -d '[{"key": "KEY", "value": "VALUE"}, ...]'
+# NOT: RENDER_API_KEY'i Render dashboard'dan al, buraya yapıştırma!
 ```
 
 ### Git → GitHub → Render (CI/CD)

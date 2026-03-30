@@ -99,10 +99,10 @@ def _profile_column(series: pd.Series, name: str) -> ColumnProfile:
 
     if col_type == "METRIC":
         numeric = pd.to_numeric(non_null, errors="coerce").dropna()
-        profile.min_value = float(numeric.min()) if len(numeric) else None
-        profile.max_value = float(numeric.max()) if len(numeric) else None
-        profile.mean_value = round(float(numeric.mean()), 4) if len(numeric) else None
-        profile.median_value = float(numeric.median()) if len(numeric) else None
+        profile.min_value = _safe_float(numeric.min()) if len(numeric) else None
+        profile.max_value = _safe_float(numeric.max()) if len(numeric) else None
+        profile.mean_value = _safe_float(numeric.mean(), decimals=4) if len(numeric) else None
+        profile.median_value = _safe_float(numeric.median()) if len(numeric) else None
 
     elif col_type == "DIMENSION":
         top = series.value_counts().head(5)
@@ -192,11 +192,33 @@ def _is_kpi_candidate(name: str, col_type: COLUMN_TYPE) -> bool:
     return any(kw in name_lower for kw in METRIC_KEYWORDS)
 
 
+def _safe_float(value, decimals: int | None = None) -> float | None:
+    """Convert a numpy/pandas scalar to a safe Python float, or None if NaN/Inf."""
+    import math as _math
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return None
+    if _math.isnan(f) or _math.isinf(f):
+        return None
+    if decimals is not None:
+        return round(f, decimals)
+    return f
+
+
 def _safe_serialize(value: Any) -> Any:
+    import math as _math
     if isinstance(value, (np.integer,)):
         return int(value)
     if isinstance(value, (np.floating,)):
-        return float(value)
+        f = float(value)
+        if _math.isnan(f) or _math.isinf(f):
+            return None
+        return f
+    if isinstance(value, float):
+        if _math.isnan(value) or _math.isinf(value):
+            return None
+        return value
     if pd.isna(value) if not isinstance(value, (list, dict)) else False:
         return None
     return value

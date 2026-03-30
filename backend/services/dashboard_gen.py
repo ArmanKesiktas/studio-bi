@@ -15,9 +15,11 @@ Rules:
 from __future__ import annotations
 
 import uuid
+import math
 from typing import Any
 
 import pandas as pd
+import numpy as np
 
 from services.profiler import DatasetProfile, ColumnProfile
 
@@ -75,7 +77,9 @@ def _build_kpi_cards(df: pd.DataFrame, metrics: list[ColumnProfile]) -> list[dic
         numeric = pd.to_numeric(df[col.name], errors="coerce").dropna()
         if len(numeric) == 0:
             continue
-        total = float(numeric.sum())
+        total = _safe_value(numeric.sum())
+        if total is None:
+            continue
         cards.append({
             "label": _humanize(col.name),
             "value_column": col.name,
@@ -151,7 +155,7 @@ def _build_line_chart(df: pd.DataFrame, date_col: ColumnProfile, metric_col: Col
         if len(grouped) < MIN_LINE_POINTS:
             return None
 
-        data = grouped.to_dict(orient="records")
+        data = _sanitize_records(grouped.to_dict(orient="records"))
         return {
             "chart_id": str(uuid.uuid4()),
             "chart_type": "line",
@@ -180,7 +184,7 @@ def _build_bar_chart(df: pd.DataFrame, dim_col: ColumnProfile, metric_col: Colum
         if len(grouped) == 0:
             return None
 
-        data = grouped.to_dict(orient="records")
+        data = _sanitize_records(grouped.to_dict(orient="records"))
         return {
             "chart_id": str(uuid.uuid4()),
             "chart_type": "bar",
@@ -215,7 +219,7 @@ def _build_pie_chart(df: pd.DataFrame, dim_col: ColumnProfile, metric_col: Colum
         if len(grouped) < 2:
             return None
 
-        data = grouped.to_dict(orient="records")
+        data = _sanitize_records(grouped.to_dict(orient="records"))
         return {
             "chart_id": str(uuid.uuid4()),
             "chart_type": "pie",
@@ -240,8 +244,30 @@ def _humanize(col_name: str) -> str:
 
 
 def _format_number(value: float) -> str:
+    if value is None or math.isnan(value) or math.isinf(value):
+        return "N/A"
     if abs(value) >= 1_000_000:
         return f"{value / 1_000_000:.1f}M"
     if abs(value) >= 1_000:
         return f"{value / 1_000:.1f}K"
     return f"{value:,.2f}"
+
+
+def _safe_value(v: Any) -> Any:
+    """Convert numpy/pandas scalar to JSON-safe Python type. NaN/Inf → None."""
+    if isinstance(v, (np.integer,)):
+        return int(v)
+    if isinstance(v, (np.floating, float)):
+        f = float(v)
+        if math.isnan(f) or math.isinf(f):
+            return None
+        return f
+    return v
+
+
+def _sanitize_records(records: list[dict]) -> list[dict]:
+    """Replace NaN/Inf with None in a list of dicts (chart data)."""
+    clean = []
+    for row in records:
+        clean.append({k: _safe_value(v) for k, v in row.items()})
+    return clean

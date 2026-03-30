@@ -10,3 +10,7 @@ backend/storage/parquet/*
 *.egg-info/
 dist/
 build/
+
+# Xcode user data
+xcuserdata/
+*.xcuserstate
