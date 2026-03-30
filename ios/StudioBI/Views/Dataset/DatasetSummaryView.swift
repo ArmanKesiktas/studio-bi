@@ -20,6 +20,9 @@ struct DatasetSummaryView: View {
                     .padding(.horizontal, 16)
                 }
 
+                // Insight Cards
+                InsightCardsView(dataset: dataset)
+
                 // Columns
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Sütunlar (\(dataset.columns.count))")
@@ -51,6 +54,111 @@ struct DatasetSummaryView: View {
         .padding(.horizontal, 16)
     }
 }
+
+// MARK: - Insight Cards
+
+struct InsightCardsView: View {
+    let dataset: DatasetResponse
+
+    struct Insight {
+        let icon: String
+        let color: Color
+        let title: String
+        let body: String
+    }
+
+    var insights: [Insight] {
+        var result: [Insight] = []
+
+        // Veri kalitesi: yüksek null %
+        let highNullCols = dataset.columns.filter { $0.nullPercent > 20 }
+        if !highNullCols.isEmpty {
+            let names = highNullCols.prefix(2).map { $0.name }.joined(separator: ", ")
+            result.append(Insight(
+                icon: "exclamationmark.triangle.fill",
+                color: .orange,
+                title: "Veri Kalitesi",
+                body: "\(highNullCols.count) sütunda yüksek boş değer oranı: \(names)"
+            ))
+        }
+
+        // Yinelenen satırlar
+        if dataset.duplicateRowCount > 0 {
+            result.append(Insight(
+                icon: "doc.on.doc.fill",
+                color: .red,
+                title: "Yinelenen Satırlar",
+                body: "\(dataset.duplicateRowCount) yinelenen satır tespit edildi (%\(String(format: "%.1f", dataset.duplicateRowPercent)))"
+            ))
+        }
+
+        // Önerilen metrikler (KPI adayları)
+        let kpiCols = dataset.columns.filter { $0.isKpiCandidate }
+        if !kpiCols.isEmpty {
+            result.append(Insight(
+                icon: "chart.line.uptrend.xyaxis",
+                color: .green,
+                title: "Önerilen Metrikler",
+                body: kpiCols.prefix(3).map { $0.name }.joined(separator: ", ")
+            ))
+        }
+
+        // Zaman aralığı
+        if let dateCol = dataset.columns.first(where: { $0.colType == "DATE" }),
+           let dMin = dateCol.dateMin, let dMax = dateCol.dateMax {
+            result.append(Insight(
+                icon: "calendar",
+                color: .blue,
+                title: "Zaman Aralığı",
+                body: "\(dateCol.name): \(dMin) – \(dMax)"
+            ))
+        }
+
+        // Veri iyi görünüyorsa pozitif mesaj
+        if result.isEmpty {
+            result.append(Insight(
+                icon: "checkmark.seal.fill",
+                color: .green,
+                title: "Veri Sağlıklı",
+                body: "\(dataset.rowCount.formatted()) satır, \(dataset.colCount) sütun — belirgin bir sorun tespit edilmedi."
+            ))
+        }
+
+        return Array(result.prefix(3))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Hızlı İçgörüler")
+                .font(.headline)
+                .padding(.horizontal, 16)
+
+            ForEach(Array(insights.enumerated()), id: \.offset) { _, insight in
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: insight.icon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(insight.color)
+                        .frame(width: 32, height: 32)
+                        .background(insight.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(insight.title)
+                            .font(.subheadline.weight(.semibold))
+                        Text(insight.body)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal, 16)
+            }
+        }
+    }
+}
+
+// MARK: - Column Card
 
 struct ColumnCard: View {
     let column: ColumnProfileResponse

@@ -5,13 +5,20 @@ struct ContentView: View {
 
     var body: some View {
         if let datasetId = appState.activeDatasetId {
-            datasetTabs(datasetId: datasetId)
+            DatasetTabsView(datasetId: datasetId)
         } else {
             UploadView()
         }
     }
+}
 
-    private func datasetTabs(datasetId: String) -> some View {
+// Ayrı struct olarak tanımlanması @StateObject'lerin sekme geçişlerinde
+// sıfırlanmamasını sağlar (structural identity korunur).
+struct DatasetTabsView: View {
+    let datasetId: String
+    @EnvironmentObject var appState: AppStateManager
+
+    var body: some View {
         TabView(selection: $appState.selectedTab) {
             NavigationStack {
                 DatasetDetailView(datasetId: datasetId)

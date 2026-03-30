@@ -11,6 +11,7 @@ final class DatasetViewModel: ObservableObject {
     private var currentPage = 1
 
     func load(datasetId: String) async {
+        guard dataset == nil else { return }
         isLoadingDataset = true
         errorMessage = nil
         do {
