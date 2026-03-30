@@ -22,34 +22,44 @@ struct TableView: View {
         .task { await vm.load(datasetId: datasetId) }
     }
 
+    private func columnWidth(for col: String, in page: TablePageResponse) -> CGFloat {
+        let colIdx = page.columns.firstIndex(of: col) ?? 0
+        let headerLen = col.count
+        let maxCellLen = page.rows.prefix(20).compactMap { row in
+            row.indices.contains(colIdx) ? row[colIdx].displayString.count : nil
+        }.max() ?? 0
+        let chars = max(headerLen, maxCellLen)
+        return CGFloat(min(max(chars, 8) * 9, 220))
+    }
+
     private func tableGrid(page: TablePageResponse) -> some View {
         ScrollView([.horizontal, .vertical]) {
-            Grid(alignment: .leading, horizontalSpacing: 0, verticalSpacing: 0) {
-                // Header
-                GridRow {
+            VStack(alignment: .leading, spacing: 0) {
+                // Header row
+                HStack(spacing: 0) {
                     ForEach(page.columns, id: \.self) { col in
                         Text(col)
                             .font(.caption.bold())
-                            .lineLimit(1)
+                            .lineLimit(2)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 10)
-                            .frame(minWidth: 100, alignment: .leading)
+                            .frame(width: columnWidth(for: col, in: page), alignment: .leading)
                             .background(Color(.systemGroupedBackground))
                         Divider()
                     }
                 }
                 Divider()
 
-                // Rows
+                // Data rows
                 ForEach(Array(page.rows.enumerated()), id: \.offset) { rowIdx, row in
-                    GridRow {
-                        ForEach(Array(row.enumerated()), id: \.offset) { colIdx, cell in
+                    HStack(spacing: 0) {
+                        ForEach(Array(zip(page.columns, row)), id: \.0) { col, cell in
                             Text(cell.displayString)
                                 .font(.caption)
-                                .lineLimit(1)
+                                .lineLimit(2)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 9)
-                                .frame(minWidth: 100, alignment: .leading)
+                                .frame(width: columnWidth(for: col, in: page), alignment: .leading)
                                 .background(rowIdx % 2 == 0 ? Color.clear : Color(.systemFill).opacity(0.4))
                             Divider()
                         }

@@ -36,6 +36,18 @@ struct ChatView: View {
             // Input bar
             inputBar
         }
+        .task { vm.loadHistory(datasetId: datasetId) }
+        .toolbar {
+            if !vm.messages.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(role: .destructive) {
+                        vm.clearHistory()
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                }
+            }
+        }
     }
 
     private var suggestedQuestions: some View {

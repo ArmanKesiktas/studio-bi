@@ -12,10 +12,16 @@ struct ChatResponse: Codable {
     let isMocked: Bool
 }
 
-struct ChatMessage: Identifiable {
-    let id = UUID()
+struct ChatMessage: Identifiable, Codable {
+    let id: UUID
     let role: Role
     let text: String
 
-    enum Role { case user, assistant }
+    init(role: Role, text: String) {
+        self.id = UUID()
+        self.role = role
+        self.text = text
+    }
+
+    enum Role: String, Codable { case user, assistant }
 }

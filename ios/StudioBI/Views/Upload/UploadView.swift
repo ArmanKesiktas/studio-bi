@@ -10,7 +10,7 @@ struct UploadView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 if vm.isLoading {
-                    LoadingView(message: "Dosya yükleniyor ve analiz ediliyor…")
+                    uploadingView
                 } else {
                     ScrollView {
                         VStack(spacing: 0) {
@@ -92,6 +92,7 @@ struct UploadView: View {
                 formatBadge("CSV", icon: "tablecells")
                 formatBadge("XLSX", icon: "tablecells.fill")
                 formatBadge("XLS", icon: "doc.text")
+                formatBadge("JSON", icon: "curlybraces")
             }
 
             Text("Maksimum dosya boyutu: 50MB")
@@ -99,6 +100,35 @@ struct UploadView: View {
                 .foregroundStyle(.tertiary)
 
             Spacer().frame(height: 32)
+        }
+    }
+
+    private var uploadingView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            Image(systemName: "arrow.up.circle.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(.blue)
+
+            VStack(spacing: 8) {
+                if vm.uploadProgress < 1.0 {
+                    Text("Dosya yükleniyor…")
+                        .font(.headline)
+                    ProgressView(value: vm.uploadProgress)
+                        .progressViewStyle(.linear)
+                        .padding(.horizontal, 48)
+                    Text("%\(Int(vm.uploadProgress * 100))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Yapay zeka analiz ediyor…")
+                        .font(.headline)
+                    ProgressView()
+                }
+            }
+
+            Spacer()
         }
     }
 

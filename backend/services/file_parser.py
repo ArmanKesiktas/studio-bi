@@ -13,7 +13,7 @@ import pandas as pd
 from config import PARQUET_DIR, UPLOAD_DIR, settings
 
 
-ALLOWED_EXTENSIONS = {".csv", ".xlsx", ".xls"}
+ALLOWED_EXTENSIONS = {".csv", ".xlsx", ".xls", ".json"}
 MAX_BYTES = settings.max_upload_size_mb * 1024 * 1024
 
 
@@ -32,6 +32,8 @@ def parse_file(file_path: Path, dataset_id: str) -> pd.DataFrame:
         df = _parse_csv(file_path)
     elif suffix in (".xlsx", ".xls"):
         df = _parse_xlsx(file_path)
+    elif suffix == ".json":
+        df = _parse_json(file_path)
     else:
         raise ValueError(f"Desteklenmeyen format: {suffix}")
 
@@ -61,6 +63,15 @@ def _parse_csv(path: Path) -> pd.DataFrame:
 
 def _parse_xlsx(path: Path) -> pd.DataFrame:
     return pd.read_excel(path, engine="openpyxl")
+
+
+def _parse_json(path: Path) -> pd.DataFrame:
+    df = pd.read_json(path)
+    # JSON records formatı: [{}, {}, …] — normalize edilmiş düz tablo
+    if isinstance(df.columns[0], int):
+        # Dikey format: normalize et
+        df = pd.json_normalize(pd.read_json(path, typ="series").tolist())
+    return df
 
 
 def _basic_clean(df: pd.DataFrame) -> pd.DataFrame:

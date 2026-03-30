@@ -40,7 +40,7 @@ final class APIClient {
 
     // MARK: - Upload
 
-    func upload(fileURL: URL) async throws -> UploadResponse {
+    func upload(fileURL: URL, onProgress: @escaping @Sendable (Double) -> Void) async throws -> UploadResponse {
         let url = URL(string: "\(baseURL)/upload")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -50,17 +50,28 @@ final class APIClient {
 
         let data = try Data(contentsOf: fileURL)
         let filename = fileURL.lastPathComponent
-        let mimeType = mimeType(for: fileURL)
+        let mime = mimeType(for: fileURL)
 
         var body = Data()
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mime)\r\n\r\n".data(using: .utf8)!)
         body.append(data)
         body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
-        request.httpBody = body
 
-        return try await perform(request)
+        let delegate = UploadProgressDelegate(onProgress: onProgress)
+        let (responseData, response) = try await session.upload(for: request, from: body, delegate: delegate)
+
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200..<300).contains(http.statusCode) else {
+            let msg = String(data: responseData, encoding: .utf8) ?? "Bilinmeyen hata"
+            throw APIError.serverError(http.statusCode, msg)
+        }
+        do {
+            return try decoder.decode(UploadResponse.self, from: responseData)
+        } catch {
+            throw APIError.decodingError(error)
+        }
     }
 
     // MARK: - Dataset
@@ -149,7 +160,25 @@ final class APIClient {
         case "csv": return "text/csv"
         case "xlsx": return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         case "xls": return "application/vnd.ms-excel"
+        case "json": return "application/json"
         default: return "application/octet-stream"
         }
+    }
+}
+
+// MARK: - Upload progress delegate
+
+private final class UploadProgressDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    let onProgress: @Sendable (Double) -> Void
+    init(onProgress: @escaping @Sendable (Double) -> Void) { self.onProgress = onProgress }
+
+    func urlSession(
+        _ session: URLSession, task: URLSessionTask,
+        didSendBodyData bytesSent: Int64,
+        totalBytesSent: Int64,
+        totalBytesExpectedToSend: Int64
+    ) {
+        guard totalBytesExpectedToSend > 0 else { return }
+        onProgress(Double(totalBytesSent) / Double(totalBytesExpectedToSend))
     }
 }
