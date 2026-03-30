@@ -8,19 +8,21 @@ struct UploadView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                if vm.isLoading {
-                    uploadingView
-                } else {
-                    ScrollView {
-                        VStack(spacing: 0) {
-                            dropZone
-                            if !appState.recentDatasets.isEmpty {
-                                RecentDatasetsSection()
-                            }
+            ScrollView {
+                VStack(spacing: DS.Spacing.lg) {
+                    if vm.isLoading {
+                        analysisAnimation
+                    } else {
+                        heroSection
+                        uploadButton
+                        formatBadges
+
+                        if !appState.recentDatasets.isEmpty {
+                            recentSection
                         }
                     }
                 }
+                .padding(.vertical, DS.Spacing.xl)
             }
             .navigationTitle("Studio BI")
             .navigationBarTitleDisplayMode(.large)
@@ -42,7 +44,7 @@ struct UploadView: View {
                     appState.setActive(dataset)
                 }
             }
-            .alert("Hata", isPresented: Binding(
+            .alert("Bir Sorun Oluştu", isPresented: Binding(
                 get: { vm.errorMessage != nil },
                 set: { if !$0 { vm.errorMessage = nil } }
             )) {
@@ -53,95 +55,161 @@ struct UploadView: View {
         }
     }
 
-    private var dropZone: some View {
-        VStack(spacing: 32) {
-            Spacer().frame(height: 32)
+    // MARK: - Hero
 
-            VStack(spacing: 20) {
-                ZStack {
-                    Circle()
-                        .fill(.blue.opacity(0.1))
-                        .frame(width: 120, height: 120)
-                    Image(systemName: "chart.bar.doc.horizontal")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.blue)
-                }
-
-                VStack(spacing: 8) {
-                    Text("Verinizi Yükleyin")
-                        .font(.title2.bold())
-                    Text("CSV veya XLSX dosyanızı seçin.\nYapay zeka anında analiz eder.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
+    private var heroSection: some View {
+        VStack(spacing: DS.Spacing.md) {
+            ZStack {
+                Circle()
+                    .fill(DS.Colors.accentSoft)
+                    .frame(width: 100, height: 100)
+                Image(systemName: "chart.bar.doc.horizontal")
+                    .font(.system(size: 40, weight: .medium))
+                    .foregroundStyle(DS.Colors.accent)
             }
 
-            Button {
-                showFilePicker = true
-            } label: {
-                Label("Dosya Seç", systemImage: "doc.badge.plus")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
+            VStack(spacing: DS.Spacing.sm) {
+                Text("Verinizi Yükleyin")
+                    .font(DS.Font.headline)
+                Text("Dosyanızı seçin, yapay zeka anında analiz etsin.")
+                    .font(DS.Font.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
-            .buttonStyle(.borderedProminent)
-            .padding(.horizontal, 32)
+        }
+        .padding(.horizontal, DS.Spacing.xl)
+    }
 
-            HStack(spacing: 16) {
-                formatBadge("CSV", icon: "tablecells")
-                formatBadge("XLSX", icon: "tablecells.fill")
-                formatBadge("XLS", icon: "doc.text")
-                formatBadge("JSON", icon: "curlybraces")
+    // MARK: - Upload Button
+
+    private var uploadButton: some View {
+        Button {
+            showFilePicker = true
+        } label: {
+            Label("Dosya Seç", systemImage: "doc.badge.plus")
+                .font(.system(size: 16, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .frame(height: DS.Size.buttonHeight)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(DS.Colors.accent)
+        .padding(.horizontal, DS.Spacing.xl)
+    }
+
+    // MARK: - Format Badges
+
+    private var formatBadges: some View {
+        HStack(spacing: DS.Spacing.sm) {
+            ForEach(["CSV", "XLSX", "JSON"], id: \.self) { fmt in
+                Text(fmt)
+                    .font(DS.Font.captionBold)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, DS.Spacing.md)
+                    .padding(.vertical, DS.Spacing.sm)
+                    .background(DS.Colors.surface, in: RoundedRectangle(cornerRadius: DS.Radius.small))
             }
-
-            Text("Maksimum dosya boyutu: 50MB")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-
-            Spacer().frame(height: 32)
         }
     }
 
-    private var uploadingView: some View {
-        VStack(spacing: 24) {
-            Spacer()
+    // MARK: - Sequential Analysis Animation
 
-            Image(systemName: "arrow.up.circle.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(.blue)
+    private var analysisAnimation: some View {
+        VStack(spacing: DS.Spacing.lg) {
+            Spacer().frame(height: DS.Spacing.xxl)
 
-            VStack(spacing: 8) {
-                if vm.uploadProgress < 1.0 {
-                    Text("Dosya yükleniyor…")
-                        .font(.headline)
-                    ProgressView(value: vm.uploadProgress)
-                        .progressViewStyle(.linear)
-                        .padding(.horizontal, 48)
-                    Text("%\(Int(vm.uploadProgress * 100))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("Yapay zeka analiz ediyor…")
-                        .font(.headline)
-                    ProgressView()
-                }
+            Image(systemName: "sparkles")
+                .font(.system(size: 44, weight: .medium))
+                .foregroundStyle(DS.Colors.accent)
+                .symbolEffect(.pulse, options: .repeating)
+
+            VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                AnalysisStepRow(text: "Dosya okunuyor…", done: vm.uploadProgress > 0.3)
+                AnalysisStepRow(text: "Yapı analiz ediliyor…", done: vm.uploadProgress > 0.7)
+                AnalysisStepRow(text: "AI içgörüler üretiliyor…", done: vm.uploadProgress >= 1.0, isActive: vm.uploadProgress > 0.7)
             }
+            .padding(.horizontal, DS.Spacing.xxl)
+
+            ProgressView(value: min(vm.uploadProgress, 1.0))
+                .progressViewStyle(.linear)
+                .tint(DS.Colors.accent)
+                .padding(.horizontal, DS.Spacing.xxl)
 
             Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func formatBadge(_ name: String, icon: String) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .foregroundStyle(.secondary)
-            Text(name)
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
+    // MARK: - Recent Datasets
+
+    private var recentSection: some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+            Text("Son Veriler")
+                .font(DS.Font.title)
+                .padding(.horizontal, DS.Spacing.md)
+
+            ForEach(appState.recentDatasets, id: \.datasetId) { dataset in
+                Button {
+                    appState.openRecent(dataset)
+                } label: {
+                    HStack(spacing: DS.Spacing.sm) {
+                        Image(systemName: "doc.text.fill")
+                            .font(.system(size: 18))
+                            .foregroundStyle(DS.Colors.accent)
+                            .frame(width: 36)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(dataset.filename)
+                                .font(DS.Font.captionBold)
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            Text("\(dataset.rowCount) satır · \(dataset.colCount) sütun")
+                                .font(DS.Font.micro)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(DS.Spacing.sm + DS.Spacing.xs)
+                    .background(DS.Colors.surface, in: RoundedRectangle(cornerRadius: DS.Radius.medium))
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, DS.Spacing.md)
+            }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+        .padding(.top, DS.Spacing.sm)
+    }
+}
+
+// MARK: - Analysis Step Row
+
+private struct AnalysisStepRow: View {
+    let text: String
+    let done: Bool
+    var isActive: Bool = false
+
+    var body: some View {
+        HStack(spacing: DS.Spacing.sm) {
+            if done {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(DS.Colors.success)
+                    .font(.system(size: 18, weight: .medium))
+            } else if isActive {
+                ProgressView()
+                    .scaleEffect(0.7)
+                    .frame(width: 18, height: 18)
+            } else {
+                Circle()
+                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1.5)
+                    .frame(width: 18, height: 18)
+            }
+            Text(text)
+                .font(DS.Font.body)
+                .foregroundStyle(done ? .primary : .secondary)
+        }
+        .animation(.easeInOut(duration: 0.3), value: done)
     }
 }

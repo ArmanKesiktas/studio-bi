@@ -43,4 +43,11 @@ final class DatasetViewModel: ObservableObject {
         guard currentPage > 1 else { return }
         await loadTable(datasetId: datasetId, page: currentPage - 1)
     }
+
+    func forceReload() {
+        guard let id = dataset?.datasetId ?? tablePage?.datasetId else { return }
+        dataset = nil
+        tablePage = nil
+        Task { await load(datasetId: id) }
+    }
 }
