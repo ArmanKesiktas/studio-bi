@@ -2,9 +2,9 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct UploadView: View {
+    @EnvironmentObject var appState: AppStateManager
     @StateObject private var vm = UploadViewModel()
     @State private var showFilePicker = false
-    @Binding var uploadedDatasetId: String?
 
     var body: some View {
         NavigationStack {
@@ -12,7 +12,14 @@ struct UploadView: View {
                 if vm.isLoading {
                     LoadingView(message: "Dosya yükleniyor ve analiz ediliyor…")
                 } else {
-                    dropZone
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            dropZone
+                            if !appState.recentDatasets.isEmpty {
+                                RecentDatasetsSection()
+                            }
+                        }
+                    }
                 }
             }
             .navigationTitle("Studio BI")
@@ -31,7 +38,9 @@ struct UploadView: View {
                 }
             }
             .onChange(of: vm.uploadedDataset) { _, dataset in
-                uploadedDatasetId = dataset?.datasetId
+                if let dataset {
+                    appState.setActive(dataset)
+                }
             }
             .alert("Hata", isPresented: Binding(
                 get: { vm.errorMessage != nil },
@@ -46,7 +55,7 @@ struct UploadView: View {
 
     private var dropZone: some View {
         VStack(spacing: 32) {
-            Spacer()
+            Spacer().frame(height: 32)
 
             VStack(spacing: 20) {
                 ZStack {
@@ -85,12 +94,11 @@ struct UploadView: View {
                 formatBadge("XLS", icon: "doc.text")
             }
 
-            Spacer()
-
             Text("Maksimum dosya boyutu: 50MB")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
-                .padding(.bottom, 32)
+
+            Spacer().frame(height: 32)
         }
     }
 

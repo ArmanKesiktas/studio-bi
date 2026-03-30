@@ -1,19 +1,18 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var activeDatasetId: String?
-    @State private var selectedTab = 0
+    @EnvironmentObject var appState: AppStateManager
 
     var body: some View {
-        if let datasetId = activeDatasetId {
+        if let datasetId = appState.activeDatasetId {
             datasetTabs(datasetId: datasetId)
         } else {
-            UploadView(uploadedDatasetId: $activeDatasetId)
+            UploadView()
         }
     }
 
     private func datasetTabs(datasetId: String) -> some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: $appState.selectedTab) {
             NavigationStack {
                 DatasetDetailView(datasetId: datasetId)
                     .navigationTitle("Veri Seti")
@@ -59,8 +58,7 @@ struct ContentView: View {
     private var newDatasetButton: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Button {
-                activeDatasetId = nil
-                selectedTab = 0
+                appState.clearActive()
             } label: {
                 Image(systemName: "plus.circle")
             }
