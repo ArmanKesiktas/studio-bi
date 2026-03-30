@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+backend/storage/uploads/*
+backend/storage/parquet/*
+*.pkl
+.DS_Store
+*.egg-info/
+dist/
+build/
